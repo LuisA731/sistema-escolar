@@ -1,0 +1,40 @@
+# =============================================================================
+# docker-compose.yml - Orquestacion de PostgreSQL seguro para sistema-escolar
+# Uso: docker compose up -d
+# =============================================================================
+
+services:
+  postgres-escolar:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_IMAGE:-sistema-escolar-db:v1}
+    container_name: sistema_escolar_pg
+    restart: unless-stopped
+    environment:
+      # Credenciales por defecto para desarrollo/pruebas (sobrescribibles via .env)
+      POSTGRES_DB: ${POSTGRES_DB:-sistema_escolar}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-PostgresRootDev2026!}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command:
+      - "postgres"
+      - "-c"
+      - "password_encryption=scram-sha-256"
+      - "-c"
+      - "app.encryption_key=${APP_ENCRYPTION_KEY:-ClaveMaestraEscolar_Dev2026!}"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata_sistema_escolar:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-sistema_escolar}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata_sistema_escolar:
+    driver: local

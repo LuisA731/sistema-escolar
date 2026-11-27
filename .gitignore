@@ -1,0 +1,14 @@
+# Carpetas locales de evidencias y documentación (no se suben a GitHub)
+evidencias/
+documentacion/
+
+# Variables de entorno locales con posibles secretos reales
+.env
+
+# Archivos temporales del sistema operativo / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.vscode/
+.idea/

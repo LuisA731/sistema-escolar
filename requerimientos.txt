@@ -1,0 +1,50 @@
+PROYECTO: sistema-escolar (PostgreSQL + Docker + pgcrypto)
+OBJETIVO: Sistema escolar con proteccion de datos sensibles mediante cifrado, hashing y control de acceso basado en roles (RBAC).
+
+1. ESTRUCTURA DEL REPOSITORIO
+sistema-escolar/
+├── Dockerfile
+├── docker-compose.yml
+├── README.md
+├── requerimientos.txt
+├── sql/
+│   ├── 01_esquema.sql
+│   ├── 02_datos.sql
+│   └── 03_seguridad.sql
+├── evidencias/
+│   ├── evidencia01.png
+│   └── evidencia02.png
+└── documentacion/
+    └── reporte.pdf
+
+2. INFRAESTRUCTURA DOCKER
+- Debe arrancar sin pasos manuales extra mediante: docker compose up -d
+- Usar imagen oficial de PostgreSQL (ej. postgres:16-alpine o postgres:17-alpine).
+- Cargar automaticamente los scripts SQL en orden (01_esquema.sql, 02_datos.sql, 03_seguridad.sql) mediante /docker-entrypoint-initdb.d/.
+- Incluir Dockerfile funcional que empaquete/prepare la base inicializada o los scripts y configuracion requerida para publicar en Docker Hub (ej. docker.io/<usuario>/sistema_escolar:v1).
+- Definir variables de entorno seguras por defecto para desarrollo/pruebas y documentarlas en docker-compose.yml y README.md.
+
+3. MODELO DE DATOS (Base de datos: sistema_escolar)
+- alumnos: id_alumno (PK), matricula (unica), nombre_completo, curp_cifrado (BYTEA), correo_cifrado (BYTEA), telefono_cifrado (BYTEA), fecha_nacimiento, fecha_registro.
+- materias: id_materia (PK), clave_materia (unica), nombre_materia, creditos, docente.
+- calificaciones: id_calificacion (PK), id_alumno (FK -> alumnos), id_materia (FK -> materias), periodo, calificacion_final, observaciones_cifradas (BYTEA).
+- asistencias: id_asistencia (PK), id_alumno (FK -> alumnos), id_materia (FK -> materias), fecha_clase, estado (presente, ausente, retardo, justificado), nota_cifrada (BYTEA).
+- usuarios_sistema: id_usuario (PK), username (unico), password_hash (TEXT con bcrypt/pgcrypto), rol, activo, creado_en.
+
+4. SEGURIDAD EN POSTGRESQL (pgcrypto)
+- Habilitar EXTENSION IF NOT EXISTS pgcrypto;
+- Cifrado simetrico autenticado/robusto con pgp_sym_encrypt / pgp_sym_decrypt (o cifrado por columnas sensibles) usando clave configurable/parametrizada (documentar claramente la clave de prueba y como rotarla/inyectarla).
+- Hash de contrasenas con crypt(password, gen_salt('bf', 10)) y verificacion mediante crypt(input_pass, password_hash) = password_hash.
+- Roles y usuarios con minimos privilegios (RBAC):
+  * rol_admin / usuario admin (pass: Admin123): administracion general y gestion de usuarios/permisos.
+  * rol_docente / usuario docente_demo: consulta de alumnos/materias, lectura/escritura de calificaciones y asistencias, sin acceso directo a hashes ni a datos sensibles no autorizados.
+  * rol_consulta / usuario consulta_demo: solo lectura restringida (SELECT en vistas o tablas permitidas, sin permisos de escritura ni acceso a usuarios_sistema).
+- Revocar PUBLIC innecesario y aplicar GRANT/REVOKE explicitos.
+
+5. DATOS DE PRUEBA (02_datos.sql)
+- Insertar al menos 5 alumnos, 4 materias, 10+ calificaciones y 12+ asistencias con datos cifrados reales mediante pgp_sym_encrypt.
+- Insertar usuarios de prueba (incluyendo admin / Admin123) con contrasenas hasheadas con bcrypt.
+
+6. DOCUMENTACION Y EVIDENCIAS
+- README.md con: descripcion del sistema, arquitectura/cifrado, despliegue con git clone + docker compose up -d, comandos de publicacion en Docker Hub y tabla de credenciales de prueba.
+- Guia clara para generar evidencias en evidencias/ (evidencia01.png, evidencia02.png) y documentacion/reporte.pdf (explicacion del mecanismo de cifrado, modelo de datos, roles y pruebas).
